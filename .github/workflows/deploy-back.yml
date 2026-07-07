@@ -1,0 +1,65 @@
+name: CI/CD Pipeline - Microservicios Backend (EKS)
+
+on:
+  push:
+    branches:
+      - deploy
+
+jobs:
+  build-and-deploy:
+    name: Build, Push y Deploy a EKS
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout del código
+      uses: actions/checkout@v4
+
+    - name: Configurar credenciales de AWS
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: us-east-1
+
+    - name: Login en Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+
+    - name: Build y Push de VENTAS
+      working-directory: ./back-Ventas_SpringBoot/Springboot-API-REST
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: ev3/ventas 
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+    - name: Build y Push de DESPACHOS
+      working-directory: ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: ev3/despachos 
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+    - name: Actualizar Kubeconfig
+      run: |
+        aws eks update-kubeconfig --region us-east-1 --name ClusterEV3
+
+    - name: Aplicar manifiestos y actualizar imágenes
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        TAG: ${{ github.sha }}
+      run: |
+        kubectl apply -f k8s/
+
+        kubectl set image deployment/back-ventas-deployment back-ventas=$ECR_REGISTRY/ev3/ventas:$TAG
+        kubectl set image deployment/back-despachos-deployment back-despachos=$ECR_REGISTRY/ev3/despachos:$TAG
+
+        kubectl rollout status deployment/back-ventas-deployment
+        kubectl rollout status deployment/back-despachos-deployment
