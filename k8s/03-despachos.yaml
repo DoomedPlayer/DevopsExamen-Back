@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: back-despachos-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: back-despachos
+  template:
+    metadata:
+      labels:
+        app: back-despachos
+    spec:
+      containers:
+      - name: back-despachos
+        image: 675844720079.dkr.ecr.us-east-1.amazonaws.com/ev3/despachos:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_ENDPOINT
+          value: "db-service"
+        - name: DB_PORT
+          value: "3306"
+        - name: DB_NAME
+          value: "db_desarrollo"
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: credenciales-db
+              key: MYSQL_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: credenciales-db
+              key: MYSQL_PASSWORD
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi" 
+          limits:
+            cpu: "500m"
+            memory: "1024Mi" 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: back-despachos-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: back-despachos
+  ports:
+  - protocol: TCP
+    port: 8081
+    targetPort: 8080
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: despachos-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: back-despachos-deployment
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50

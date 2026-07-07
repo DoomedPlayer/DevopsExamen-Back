@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: back-ventas-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: back-ventas
+  template:
+    metadata:
+      labels:
+        app: back-ventas
+    spec:
+      containers:
+      - name: back-ventas
+        image: 675844720079.dkr.ecr.us-east-1.amazonaws.com/ev3/ventas:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_ENDPOINT
+          value: "db-service"
+        - name: DB_PORT
+          value: "3306"
+        - name: DB_NAME
+          value: "db_desarrollo"
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: credenciales-db
+              key: MYSQL_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: credenciales-db
+              key: MYSQL_PASSWORD
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi" 
+          limits:
+            cpu: "500m"
+            memory: "1024Mi" 
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: back-ventas-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: back-ventas
+  ports:
+  - protocol: TCP
+    port: 8082
+    targetPort: 8080
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ventas-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: back-ventas-deployment
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
