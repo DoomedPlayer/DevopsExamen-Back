@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: back-despachos
-        image: 675844720079.dkr.ecr.us-east-1.amazonaws.com/ev3/despachos:latest
+        image: 938302978508.dkr.ecr.us-east-1.amazonaws.com/examen/despacho:latest
         ports:
         - containerPort: 8080
         env:
@@ -65,8 +65,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: back-despachos-deployment
-  minReplicas: 2
-  maxReplicas: 5
+  minReplicas: 1
+  maxReplicas: 3
   metrics:
   - type: Resource
     resource:

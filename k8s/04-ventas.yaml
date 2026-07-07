@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: back-ventas
-        image: 675844720079.dkr.ecr.us-east-1.amazonaws.com/ev3/ventas:latest
+        image: 938302978508.dkr.ecr.us-east-1.amazonaws.com/examen/venta:latest
         ports:
         - containerPort: 8080
         env:
@@ -66,8 +66,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: back-ventas-deployment
-  minReplicas: 2
-  maxReplicas: 5
+  minReplicas: 1
+  maxReplicas: 3
   metrics:
   - type: Resource
     resource:
